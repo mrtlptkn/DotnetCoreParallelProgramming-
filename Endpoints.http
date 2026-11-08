@@ -1,0 +1,51 @@
+@host = https://localhost:54211
+
+### Tüm hesaplar (başlangıçta 5 hesap, her biri 1000)
+GET {{host}}/api/accounts
+
+### Toplam (beklenen 5000)
+GET {{host}}/api/total
+
+### Bakiyeleri 1000'e sıfırla
+POST {{host}}/api/reset
+
+### Tek transfer: 1 -> 2, 100 TL (lock ile)
+POST {{host}}/api/transfer?fromId=1&toId=2&amount=100
+
+### Tek transfer: olmayan hesap (404 beklenir)
+POST {{host}}/api/transfer?fromId=1&toId=99&amount=10
+
+### Tek transfer: yetersiz bakiye (400 beklenir)
+POST {{host}}/api/transfer?fromId=1&toId=2&amount=999999
+
+### RACE CONDITION: kilitsiz, 20000 transfer (difference genelde 0 değil)
+POST {{host}}/api/race?count=20000&safe=false
+
+### lock ile güvenli, 20000 transfer (difference her zaman 0)
+POST {{host}}/api/race?count=20000&safe=true
+
+### Toplu faiz %2 (Parallel.ForEach)
+POST {{host}}/api/interest?rate=0.02
+
+### PLINQ raporu
+GET {{host}}/api/reportParallelOrdered
+
+
+### PLINQ raporu
+GET {{host}}/api/reportParallelNoOrder
+
+
+### LINQ raporu
+GET {{host}}/api/report
+
+
+### Async transfer, en fazla 4 eşzamanlı (SemaphoreSlim)
+POST {{host}}/api/transfers/async?count=100&maxConcurrency=4
+
+### Async transfer, en fazla 20 eşzamanlı (elapsedMs daha düşük çıkmalı)
+POST {{host}}/api/transfers/async?count=100&maxConcurrency=20
+
+
+### Async transfer Paralel, en fazla 20 eşzamanlı (elapsedMs daha düşük çıkmalı)
+POST {{host}}/api/transfers/parallel-async?count=100&maxConcurrency=20
+
