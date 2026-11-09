@@ -5,7 +5,7 @@ public sealed class Account
     public Account(int id, decimal balance)
     {
         Id = id;
-        Balance = balance;
+        Balance = balance; // bakiye bilgisi
     }
 
     public int Id { get; }
@@ -24,7 +24,7 @@ public sealed class Bank
             .ToArray();
     }
 
-    public Account[] Accounts { get; }
+    public Account[] Accounts { get; } // Bankadaki hesaplar.
 
     public Account? Find(int id) => Accounts.FirstOrDefault(a => a.Id == id);
 
@@ -37,6 +37,7 @@ public sealed class Bank
     public decimal Total() => Accounts.Sum(a => { return a.Balance; });
 }
 
+// Hesaplar arası para transferini simüle ettiğimiz servis
 public static class Transfers
 {
     // Kilitsiz: race condition'ı göstermek için (ders amaçlı)
@@ -52,7 +53,7 @@ public static class Transfers
         return true;
     }
 
-    // lock ile güvenli. Kilitler her zaman Id sırasıyla alınır (deadlock önleme).
+    // lock ile güvenli. Kilitler her zaman Id sırasıyla alınır (deadlock önleme). Thread-Safe kullanım
     public static bool Safe(Account from, Account to, decimal amount)
     {
         if (amount <= 0 || from.Id == to.Id) return false;

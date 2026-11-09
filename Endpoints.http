@@ -18,11 +18,11 @@ POST {{host}}/api/transfer?fromId=1&toId=99&amount=10
 ### Tek transfer: yetersiz bakiye (400 beklenir)
 POST {{host}}/api/transfer?fromId=1&toId=2&amount=999999
 
-### RACE CONDITION: kilitsiz, 20000 transfer (difference genelde 0 değil)
-POST {{host}}/api/race?count=20000&safe=false
+### RACE CONDITION: kilitsiz, 10000 transfer (difference genelde 0 değil)
+POST {{host}}/api/race?count=10&safe=false
 
 ### lock ile güvenli, 20000 transfer (difference her zaman 0)
-POST {{host}}/api/race?count=20000&safe=true
+POST {{host}}/api/race?count=10&safe=true
 
 ### Toplu faiz %2 (Parallel.ForEach)
 POST {{host}}/api/interest?rate=0.02

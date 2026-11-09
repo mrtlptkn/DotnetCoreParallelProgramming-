@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace SimpleBank.Api;
@@ -24,26 +25,30 @@ public static class Simulations
   {
     bank.Reset(1000m);
     var accounts = bank.Accounts;
-    var expected = accounts.Length * 1000m;
+    var expected = accounts.Length * 1000m; // toplam banka kasasındaki para.
     long unsafesuccessful = 0;
     long safesuccessful = 0;
 
     var sw = Stopwatch.StartNew();
 
-    Parallel.For(0, count, _ =>
+    Parallel.For(0, count, _ => // 10.000 account sayısı dönüp topluca accountlar arası para transferi yapacağımızı düşünelim.
     {
-      var from = accounts[Random.Shared.Next(accounts.Length)];
-      var to = accounts[Random.Shared.Next(accounts.Length)];
-      var amount = Random.Shared.Next(1, 100);
+      // Normal senkron programlamada Random değerleri üretmek için Random.Next kullanılır. Ama bu kodda ParallelFor içerisinde olduğumuzdan Random.Next doğru çalışmaz bu sebeple Thread-Safe versiyonunu yani Random.Shared.Next()
+      var from = accounts[Random.Shared.Next(accounts.Length)]; // 25
+      var to = accounts[Random.Shared.Next(accounts.Length)]; // 65
+      var amount = Random.Shared.Next(1, 100); // random transfer edilecek miktar.
+      // her bir random account için random amaount miktarı kadar para transferi yaptık.
+
+      // Thread-Safe çalışması için safe parametresi true gönderilir bu durumda Transfers.Safe methodu yani concurency göre yazılmış kilit uygulanan kod çalışır ve race condition durumu oluşmaz.
 
       var ok = safe
               ? Transfers.Safe(from, to, amount)
-              : Transfers.Unsafe(from, to, amount);
+              : Transfers.Unsafe(from, to, amount); // race condition oluşmasını bekliyoruz.
 
       if (ok)
       {
-        Interlocked.Increment(ref safesuccessful); // lock yerine atomik sayaç
-        unsafesuccessful++;
+        Interlocked.Increment(ref safesuccessful); // lock yerine atomik sayaç -> Kaç başarlı transfer oldu hesabı
+        unsafesuccessful++; // kilitsiz artırma yaptık
       }
     });
 
@@ -93,7 +98,7 @@ public static class Simulations
             .ToList();
 
     var rich = bank.Accounts.AsParallel()
-        .AsOrdered()
+        .AsOrdered() // Paralel işlemi sıralı işlemeye zorladık. 
         .WithDegreeOfParallelism(Environment.ProcessorCount)
         .Where(a => a.Balance >= 1000m)
         .Select(a => new { a.Id, a.Balance })
@@ -107,15 +112,31 @@ public static class Simulations
   public static object ReportParallelNoOrder(Bank bank)
   {
 
+    //ConcurrentBag<Account> accs = new();
+    //object syncObject = new();
 
+    ////Paralel ile milyonlarca yada milyarlaca veritabanında çekilen nesneyi işleme alma için AsParallel() sonrası forAll() ile herbir item yakalanır.
+    //// Veri sırasını AsParallel ve ForAll garanti etmez ama işlem garantisi ver.
+    //// yani sıra garanti etmez derken->veri tabanından çekilen sıra ile threadlerin veriyi işlemesini garanti etmez ama işlem sonucu granti eder.
+    //bank.Accounts.AsParallel().ForAll(item =>
+    //{
+    //  lock (syncObject)
+    //  {
+    //    item.Balance -= 10;
+    //    Console.WriteLine($"[Thread Id] -> {Thread.CurrentThread.ManagedThreadId}");
+    //    accs.Add(item); // artık paralel işlenip concurent bir liste içine eklendi.
+    //  }
+
+    //});
+
+
+    // ParallelQuery
     var groups = bank.Accounts.AsParallel()
             .GroupBy(a => a.Balance >= 1000m ? "Yüksek" : "Düşük")
             .Select(g => new { Category = g.Key, Count = g.Count(), Total = g.Sum(a => a.Balance) })
-            .OrderBy(g => g.Category)
             .ToList();
 
     var rich = bank.Accounts.AsParallel()
-        .AsOrdered()
         .WithDegreeOfParallelism(Environment.ProcessorCount)
         .Where(a => a.Balance >= 1000m)
         .Select(a => new { a.Id, a.Balance })
@@ -128,6 +149,8 @@ public static class Simulations
 
   public static object ReportSync(Bank bank)
   {
+
+    Thread.SpinWait(100000);
 
     var groups = bank.Accounts
         .GroupBy(a => a.Balance >= 1000m ? "Yüksek" : "Düşük")
@@ -161,7 +184,7 @@ public static class Simulations
 
     var tasks = Enumerable.Range(0, count).Select(async _ =>
     {
-      await gate.WaitAsync(ct);
+      await gate.WaitAsync(ct); // kilit masa dolu ise beklet
       try
       {
         var from = accounts[Random.Shared.Next(accounts.Length)];
@@ -175,7 +198,7 @@ public static class Simulations
       }
       finally
       {
-        gate.Release();
+        gate.Release(); // müşteri masadan ayrdıldı. yenisini alabiliriz.
       }
     });
 

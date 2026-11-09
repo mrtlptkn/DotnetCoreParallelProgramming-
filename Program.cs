@@ -1,7 +1,7 @@
 using SimpleBank.Api;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton(new Bank(accountCount: 10000, initialBalance: 1000m)); // paralel Linq için 10.000 ile 1.000.000 arasındaki farkı gösterelim.
+builder.Services.AddSingleton(new Bank(accountCount: 100, initialBalance: 1000m)); // paralel Linq için 10.000 ile 1.000.000 arasındaki farkı gösterelim.
 
 var app = builder.Build();
 
